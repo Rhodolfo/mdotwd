@@ -1,0 +1,42 @@
+#       Configuration file for the spherical polytrope
+#       Rodolfo Navarrete Perez
+#       Use setup line:
+#       ./setup RhoPoly -3d -cartesian --auto -with-unit=physics/Gravity
+
+REQUIRES Driver
+REQUIRES physics/Hydro/HydroMain/unsplit/Hydro_Unsplit
+REQUIRES physics/Eos/EosMain/Gamma
+REQUIRES RuntimeParameters
+REQUIRES Grid
+REQUIRES Grid/GridBoundaryConditions
+REQUIRES physics/Gravity/GravityMain/PointMass
+
+# Since I want to be simulating a binary system,
+# let's declare the donor mass, the accretor mass,
+# and the binary period here.
+PARAMETER sim_don_mass     REAL    1.       [0.0 to ]
+PARAMETER sim_acc_mass    REAL    1.       [0.0 to ]
+PARAMETER sim_use_donor    BOOLEAN false
+PARAMETER sim_use_rotation BOOLEAN false
+
+# I'm using a polytrope right now, so I have to
+# specify the density at center and the polytropic 
+# index.
+PARAMETER sim_ordern	 REAL    3.       [0.0 to ]
+
+# Variables for relaxing the polytrope
+PARAMETER sim_trelax     REAL    1.       [0.0 to ]
+PARAMETER sim_relaxrate  REAL    0.       [0.0 to ]
+
+# These are some minimum resolvable quantities
+PARAMETER sim_smallrho   REAL    0.001    [0.0 to ]
+PARAMETER sim_smallx     REAL    0.001    [0.0 to ]
+
+# Domain boundaries
+PARAMETER sim_xmax       REAL    1.e10    [0.0 to ]
+PARAMETER sim_xmin       REAL    0.       [0.0 to ]
+VARIABLE bdry
+
+# This line allows the config file to copy declaration files
+# and python scripts
+DATAFILES *.dek *.py
