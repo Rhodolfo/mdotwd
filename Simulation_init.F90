@@ -62,7 +62,7 @@ subroutine Simulation_init()
   call RuntimeParameters_get('sim_ordern',sim_acc_n)
   call RuntimeParameters_get('sim_don_mass',sim_don_mass)
   call RuntimeParameters_get('sim_ordern',sim_don_n)
-  call RuntimeParameters_get('sim_use_don_',sim_use_don_)
+  call RuntimeParameters_get('sim_use_donor',sim_use_donor)
   call RuntimeParameters_get('sim_use_rotation',sim_use_rotation)
  ! Minimum stuff
   call RuntimeParameters_get('smlrho', sim_smallrho)
@@ -128,7 +128,7 @@ subroutine Simulation_init()
      open(unit=45,file="rho.par",status="unknown")
      i = 45
      write(i,*) "============================================================"
-     if (sim_use_don_) then 
+     if (sim_use_donor) then 
      write(i,*) "Accretor mass is included"
      else
      write(i,*) "Accretor mass is ignored"
