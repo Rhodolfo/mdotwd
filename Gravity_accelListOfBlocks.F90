@@ -40,7 +40,7 @@ subroutine Gravity_accelListOfBlocks (blockCount,blockList,component, &
 
   use Gravity_data, ONLY: grv_m1,grv_x1,grv_y1,grv_z1,&
                           grv_m2,grv_x2,grv_y2,grv_z2,&
-                          grv_ome,grv_newton,& 
+                          grv_ome,grv_com,grv_newton,& 
                           useGravity,useCentrifugal,useCoriolis
   use Grid_interface, ONLY : Grid_getBlkIndexLimits, Grid_getBlkPtr, &
     Grid_getCellCoords, Grid_releaseBlkPtr
@@ -136,7 +136,7 @@ subroutine Gravity_accelListOfBlocks (blockCount,blockList,component, &
                 g_2    = - grv_newton*grv_m2*(xx(i)-xx2)/dr32_2
               ! Centrifugal 
                 if (useCentrifugal) then 
-                  cent = (grv_ome**2)*xx(i)
+                  cent = (grv_ome**2)*(xx(i)-grv_com)
                   else
                   cent = 0.
                 end if

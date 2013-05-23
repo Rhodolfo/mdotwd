@@ -25,7 +25,7 @@ module Gravity_data
 
   real, save :: grv_m1,grv_x1,grv_y1,grv_z1
   real, save :: grv_m2,grv_x2,grv_y2,grv_z2
-  real, save :: grv_ome,grv_sepa
+  real, save :: grv_ome,grv_com
 
   !! *** Physical Constants *** !!
 

@@ -58,47 +58,49 @@ subroutine Simulation_init()
   myPE = sim_meshMe
   
   ! Binary parameters
-  call RuntimeParameters_get('sim_acc_mass',sim_acc_mass)
-  call RuntimeParameters_get('sim_ordern',sim_acc_n)
-  call RuntimeParameters_get('sim_don_mass',sim_don_mass)
-  call RuntimeParameters_get('sim_ordern',sim_don_n)
-  call RuntimeParameters_get('sim_use_donor',sim_use_donor)
-  call RuntimeParameters_get('sim_use_rotation',sim_use_rotation)
- ! Minimum stuff
+  call RuntimeParameters_get('mass1',sim_acc_mass)
+  call RuntimeParameters_get('npoly',sim_acc_n)
+  call RuntimeParameters_get('mass2',sim_don_mass)
+  call RuntimeParameters_get('npoly',sim_don_n)
+  ! Fluff
   call RuntimeParameters_get('smlrho', sim_smallrho)
   call RuntimeParameters_get('smallX', sim_smallx)
- ! Domain boundaries
+  ! Domain boundaries
   call RuntimeParameters_get('xmax',sim_xmax)
   call RuntimeParameters_get('xmin',sim_xmin)
-  call RuntimeParameters_get('sim_trelax',sim_trelax)
+  ! Relaxation 
+  call RuntimeParameters_get('sim_trelax'   ,sim_trelax)
   call RuntimeParameters_get('sim_relaxrate',sim_relaxrate)
- ! This thingy
+  ! Compoistion
 #if NSPECIES > 0  
   sim_xn(2:NSPECIES)     = sim_smallx
   sim_xn(1) = 1.e0 - (NSPECIES-1)*sim_smallx
 #endif
 
-! Calculating this other thingy
 
-  ! =======================================
-  !  Create the initial condition profile
-  ! =======================================
+
+  ! ========================================
+  ! = Create the initial condition profile =
+  ! ========================================
+
   mu = 2.0/(1.0 + 3.0*Xhydrogen + 0.5*Yhelium)
 ! Doing accretor
   call sim_lane_emden(sim_acc_n,sim_acc_mass,sim_acc_rhoc,mu,&
-       sim_acc_rProf,sim_acc_radius,sim_acc_rhoProf,sim_acc_pProf,&
-       sim_acc_vProf,sim_acc_cProf,sim_acc_c)
+       sim_acc_rProf,sim_acc_radius,sim_acc_rhoProf,sim_acc_mProf,&
+       sim_acc_pProf,sim_acc_vProf,sim_acc_cProf,sim_acc_c)
 ! Doing donor if included
   call sim_lane_emden(sim_don_n,sim_don_mass,sim_don_rhoc,mu,&
-       sim_don_rProf,sim_don_radius,sim_don_rhoProf,sim_don_pProf,&
-       sim_don_vProf,sim_don_cProf,sim_don_c)
+       sim_don_rProf,sim_don_radius,sim_don_rhoProf,sim_don_mProf,&
+       sim_don_pProf,sim_don_vProf,sim_don_cProf,sim_don_c)
 
   ! =======================================
   !  (convert masses to cgs)
   ! =======================================
   sim_acc_mass = sim_acc_mass * msun
   sim_don_mass = sim_don_mass * msun
-    
+
+
+
   ! print initial condition profile to file
   if(myPE .eq. 0) then
      open(45,file="initial_acc_prof.dat")
@@ -111,33 +113,21 @@ subroutine Simulation_init()
      close(46)
   endif
   ! Calculating separation and stuff
-  call RuntimeParameters_get('sim_use_rotation',sim_use_rotation)
-  sim_ratio       = sim_don_mass / sim_acc_mass
-  sim_eggle       = (0.49*(sim_ratio**(2./3.))) / &
-                    (0.60*(sim_ratio**(2./3.))+log(1.+(sim_ratio**(1./3.))))  
-  sim_separ       = sim_don_radius / sim_eggle
-  sim_omega       = sqrt(G*(sim_acc_mass+sim_don_mass)/(sim_separ**3.)) 
-  sim_acc_center  = 0.
+  sim_ratio      = sim_don_mass / sim_acc_mass
+  sim_eggle      = (0.49*(sim_ratio**(2./3.))) / &
+                   (0.60*(sim_ratio**(2./3.))+log(1.+(sim_ratio**(1./3.))))  
+  sim_separ      = sim_don_radius / sim_eggle
+  sim_omega      = sqrt(G*(sim_acc_mass+sim_don_mass)/(sim_separ**3.)) 
+  sim_acc_center = 0.
   sim_don_center = sim_acc_center-sim_separ
-  sim_center_of_mass = (sim_acc_mass*sim_acc_center + sim_don_mass*sim_don_center) &
-                     / ( sim_acc_mass + sim_don_mass)
-  sim_L1          = 0.
+  sim_centmass   = (sim_acc_mass*sim_acc_center + sim_don_mass*sim_don_center) &
+                 / ( sim_acc_mass + sim_don_mass)
+  sim_L1         = 0.
 
 ! Writing data over here
   if (myPE .eq. 0) then
      open(unit=45,file="rho.par",status="unknown")
      i = 45
-     write(i,*) "============================================================"
-     if (sim_use_donor) then 
-     write(i,*) "Accretor mass is included"
-     else
-     write(i,*) "Accretor mass is ignored"
-     end if
-     if (sim_use_rotation) then
-     write(i,*) "Rotational terms are included"
-     else
-     write(i,*) "Rotational terms are ignored"
-     end if
      write(i,*) "============================================================"
      write(i,*)  "Polytrope Parameters for Accretor"
      write(i,*)  "mu =",mu
@@ -180,17 +170,15 @@ end subroutine Simulation_init
 
 
 ! adiabatic P(rho/rho0,P0), i.e. dS = 0
-real function Pres(densratio,P0)
+  real function Pres(densratio,P0)
   implicit none
   real,intent(in) :: densratio, P0
-  
-  Pres = P0 * densratio**(5.0/3.0)
-  
-end function Pres
+  Pres = P0 * densratio**(5.0/3.0) 
+  end function Pres
 
 
 
-subroutine sim_lane_emden(ordern,polmass,rhoc,mu,rProf,polr,rhoProf,pProf,vProf,cProf,c)
+  subroutine sim_lane_emden(ordern,polmass,rhoc,mu,rProf,polr,rhoProf,mProf,pProf,vProf,cProf,c)
   use Simulation_data, only: SIM_NPROFILE, sim_xmax
   implicit none
   real :: ordern,polmass,rhoc,mu,polr,c
@@ -211,6 +199,7 @@ subroutine sim_lane_emden(ordern,polmass,rhoc,mu,rProf,polr,rhoProf,pProf,vProf,
   real, dimension(SIM_NPROFILE)    :: pProf  
   real, dimension(SIM_NPROFILE)    :: vProf 
   real, dimension(SIM_NPROFILE)    :: cProf
+  real, dimension(SIM_NPROFILE)    :: mProf
   character(len=MAX_STRING_LENGTH) :: profFile
  
   mode = 2
@@ -253,6 +242,7 @@ subroutine sim_lane_emden(ordern,polmass,rhoc,mu,rProf,polr,rhoProf,pProf,vProf,
   do j=1,n-1
      rProf(j)   = 0.50*(R(j,1)+R(j-1,1))
      rhoProf(j) = rho(j,1)
+     mProf(j)   = mass(j)
      pProf(j)   = P(j)
      vProf(j)   = u(j,1)
      cProf(j)   = sqrt((1.0 + 1.0/ordern)*P(j)/rho(j,1))
@@ -265,6 +255,7 @@ subroutine sim_lane_emden(ordern,polmass,rhoc,mu,rProf,polr,rhoProf,pProf,vProf,
         rProf(j) =  0.50*(R(n,1)+R(n-1,1)) &
              + (j-n)*(sim_xmax - 0.50*(R(n,1)+R(n-1,1)) )/(SIM_NPROFILE - n)
         rhoProf(j) = rho(n,1)
+        mProf(j) = mass(n)
         pProf(j) = P(n)
         vProf(j) = u(n,1)
      end do

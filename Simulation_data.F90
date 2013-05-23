@@ -35,7 +35,7 @@ module Simulation_data
   real, save :: sim_separ
   real, save :: sim_eggle
   real, save :: sim_ratio
-  real, save :: sim_center_of_mass
+  real, save :: sim_centmass
   real, save :: sim_L1
   ! Accretor parameters go here
   real, save :: sim_acc_mass
@@ -45,8 +45,6 @@ module Simulation_data
   real, save :: sim_acc_c
   real, save :: sim_acc_rhoc
   ! Donor parameters here
-  logical, save :: sim_use_donor
-  logical, save :: sim_use_rotation
   real, save :: sim_don_mass
   real, save :: sim_don_radius
   real, save :: sim_don_center
@@ -70,6 +68,7 @@ module Simulation_data
   real, dimension(SIM_NPROFILE), save    :: sim_acc_pProf   ,sim_don_pProf 
   real, dimension(SIM_NPROFILE), save    :: sim_acc_vProf   ,sim_don_vProf
   real, dimension(SIM_NPROFILE), save    :: sim_acc_cProf   ,sim_don_cProf
+  real, dimension(SIM_NPROFILE), save    :: sim_acc_mProf   ,sim_don_mProf
   integer, parameter        :: np = 100000
   logical, save :: sim_gCell
   integer, save :: sim_meshMe

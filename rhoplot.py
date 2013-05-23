@@ -3,7 +3,7 @@ import os
 cmd = 'mkdir -p frames'
 os.system(cmd)
 
-fn     = "rho_hdf5_plt_cnt_"
+fn     = "wdwd_hdf5_plt_cnt_"
 x      = 0.0e+10
 y      = 0.0e+10
 z      = 0.0e+10

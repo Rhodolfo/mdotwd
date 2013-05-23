@@ -1,10 +1,14 @@
 # Relevant variables
 
-sim_acc_mass     = 1.0    
-sim_don_mass     = 0.9
-sim_ordern       = 1.5
-sim_use_donor    = .true.
-sim_use_rotation = .false.
+mass1 = 1.0    
+mass2 = 0.9
+npoly = 1.5
+
+# Gravity flags
+
+useGravity     = .true.
+useCentrifugal = .false.
+useCoriolis    = .false.
 
 # Refinement
 
@@ -106,7 +110,7 @@ zr_boundary_type = "outflow"
 
 
 # use these
-useGravity   = .true.
+# useGravity   = .true.
 useBurn      = .false.
 useShockBurn = .false.
 
