@@ -2,20 +2,22 @@
 # Rodolfo Navarrete Perez, Phillip Macias
 #
 # Use setup line:
-# ./setup RhoPoly -2d -cartesian --auto -with-unit=physics/Gravity
+# ./setup RhoPoly -2d -cartesian --auto -with-unit=physics/Gravity/GravityMain/PointMass
 
 REQUIRES Driver
 REQUIRES physics/Hydro/HydroMain/unsplit/Hydro_Unsplit
 REQUIRES physics/Eos/EosMain/Gamma
 REQUIRES RuntimeParameters
 REQUIRES Grid
-REQUIRES Grid/GridBoundaryConditions
-REQUIRES physics/Gravity/GravityMain/PointMass
+REQUIRES Grid/GridBoundaryConditions/OneRow
+REQUIRES physics/Gravity/GravityMain/Roche
 
+# Parameters
 PARAMETER npoly       REAL    1.5
-PARAMETER mass1       REAL    1.2
-PARAMETER mass2       REAL    0.9
-PARAMETER gravsoft    REAL    0.001
+PARAMETER useBdryDon  BOOLEAN TRUE
+PARAMETER useBdryAcc  BOOLEAN TRUE
+PARAMETER fillDon     BOOLEAN TRUE
+PARAMETER fillAcc     BOOLEAN TRUE
 
 # Domain boundaries, resolved densities and mass fractions
 PARAMETER sim_xmax       REAL    1.e10    [0.0 to ]
@@ -23,11 +25,6 @@ PARAMETER sim_xmin       REAL    0.       [0.0 to ]
 VARIABLE  bdry
 PARAMETER sim_smallrho   REAL    0.001    [0.0 to ]
 PARAMETER sim_smallx     REAL    0.001    [0.0 to ]
-
-# Flags for Gravity
-PARAMETER useGravity      BOOLEAN false
-PARAMETER useCentrifugasl BOOLEAN false
-PARAMETER useCoriolis     BOOLEAN false
 
 # Variables for relaxing the polytrope
 PARAMETER sim_trelax     REAL    1.       [0.0 to ]

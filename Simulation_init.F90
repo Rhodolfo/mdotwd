@@ -56,7 +56,12 @@ subroutine Simulation_init()
   !-----------------------------------------------------------------------------
   call Driver_getMype(MESH_COMM, sim_meshMe)
   myPE = sim_meshMe
-  
+
+  ! Flags
+  call RuntimeParameters_get('useBdryDon',useBdryDon)
+  call RuntimeParameters_get('useBdryAcc',useBdryAcc)
+  call RuntimeParameters_get('fillDon'   ,fillDon)
+  call RuntimeParameters_get('fillAcc'   ,fillAcc)
   ! Binary parameters
   call RuntimeParameters_get('mass1',sim_acc_mass)
   call RuntimeParameters_get('npoly',sim_acc_n)
@@ -152,8 +157,10 @@ subroutine Simulation_init()
      write(i,*)  "t_crossing  = ", sim_don_radius / sim_don_c
      write(i,*) "============================================================" 
      write(i,*)  "Resulting Binary System Parameters"
-     write(i,*)  "min_x,max_x = ", sim_xmin,sim_xmax
-     write(i,*)  "Donor Loc   = ", sim_don_center
+     write(i,*)  "min_x       = ", sim_xmin
+     write(i,*)  "max_x       = ", sim_xmax
+     write(i,*)  "acc_cent    = ", sim_acc_center
+     write(i,*)  "don_cent    = ", sim_don_center 
      write(i,*)  "Separation  = ", sim_separ
      write(i,*)  "Frequency   = ", sim_omega
      write(i,*)  "Period      = ", 6.28/sim_omega
@@ -181,7 +188,7 @@ end subroutine Simulation_init
   subroutine sim_lane_emden(ordern,polmass,rhoc,mu,rProf,polr,rhoProf,mProf,pProf,vProf,cProf,c)
   use Simulation_data, only: SIM_NPROFILE, sim_xmax
   implicit none
-  real :: ordern,polmass,rhoc,mu,polr,c
+  real :: ordern,polmass,rhoc,mu,polr,c,dist,width,soften
   real :: Pres
   real :: xsurf, ypsurf, tol, polyk
   integer :: iend, ipos, mode, j
@@ -254,9 +261,12 @@ end subroutine Simulation_init
      do j=n,SIM_NPROFILE
         rProf(j) =  0.50*(R(n,1)+R(n-1,1)) &
              + (j-n)*(sim_xmax - 0.50*(R(n,1)+R(n-1,1)) )/(SIM_NPROFILE - n)
-        rhoProf(j) = rho(n,1)
+        width    = 0.2*rProf(n)
+        dist     = abs(rProf(j)-rProf(n))
+        soften   = exp(-(dist)**2/(2.*(width**2))) 
+        rhoProf(j) = rho(n,1)*soften
         mProf(j) = mass(n)
-        pProf(j) = P(n)
+        pProf(j) = P(n)*(soften**(1.+1./ordern))
         vProf(j) = u(n,1)
      end do
   else

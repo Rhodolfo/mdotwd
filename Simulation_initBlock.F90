@@ -16,13 +16,12 @@ subroutine Simulation_initBlock(blockId,myPE)
 #include "Eos.h"
 #include "Multispecies.h"
 
-
   integer,INTENT(in) ::  blockId, myPE
 
 !  Local variables
 
   real :: abar, zbar                 ! something to do with sum of mass fractions
-  real :: xx, yy, zz, dists, distp
+  real :: xx, yy, zz, acc_dist, don_dist
   logical, parameter :: useGuardCell = .TRUE.
   real,pointer :: solnData(:,:,:,:)
 
@@ -42,13 +41,12 @@ subroutine Simulation_initBlock(blockId,myPE)
                                                      ! calculated below
   ! variables needed for the eos call
   real :: temp_zone, rho_zone, vel_zone, frac, pres_zone, bdry_zone
+  real :: rho_don, vel_don, pres_don, mass_don, fact_don
+  real :: rho_acc, vel_acc, pres_acc, mass_acc, fact_acc
+  logical :: bdry_don,bdry_acc
   real :: ptot, eint, etot, gamma
   real, dimension(EOS_NUM)  :: eosData
-  real :: sum_p, sum_rho
-
-  ! some auxiliary things for the boundary conditions
-  real :: dist
-  real, dimension(SIM_NPROFILE) :: sim_pProf,sim_rProf,sim_rhoProf,sim_vProf
+  real :: sum_p, sum_rho, width, soften, dist
 
   ! ----------------------------------------------------------------------------------------------
 
@@ -94,60 +92,127 @@ subroutine Simulation_initBlock(blockId,myPE)
 
         !X-axis
         do i = blkLimitsGC(LOW,IAXIS),blkLimitsGC(HIGH,IAXIS)
+
            iPosition(1) = i
            xx = xCoordsCell(i)
            icount = icount + 1
 
-           ! Putting in values from the Lane Emden solver
-           ! Compute the distance from the center
-           dists = sqrt((xx-sim_acc_center )**2 + (yy)**2 + (zz)**2)
-           distp = sqrt((xx-sim_don_center)**2 + (yy)**2 + (zz)**2)
-           ! Find the appropriate index in the table
-           ! A point at `dist' is frac-way between jLo and jHi.   We do a
-           ! linear interpolation of the quantities at jLo and jHi and sum those.
-           dist        = dists
-           sim_rProf   = sim_acc_rProf
-           sim_pProf   = sim_acc_pProf
-           sim_rhoProf = sim_acc_rhoProf
-           sim_vProf   = sim_acc_vProf
-           call sim_find(sim_rProf,SIM_NPROFILE,dist,jLo)
-           if (jLo .eq. 0) then
-              jLo = 1
-              jHi = 1
-              frac = 0.
-           else if (jLo .eq. SIM_NPROFILE) then
-              jLo = SIM_NPROFILE
-              jHi = SIM_NPROFILE
-              frac = 0.
-           else
-              jHi = jLo + 1
-             frac =(dist - sim_rProf(jlo)) / (sim_rProf(jhi)-sim_rProf(jlo))
-           endif
-           pres_zone = sim_pProf(jlo) + &
-                frac*(sim_pProf(jhi)  - sim_pProf(jlo))
-           rho_zone = sim_rhoProf(jlo) + &
-                frac*(sim_rhoProf(jhi)- sim_rhoProf(jlo))
-           vel_zone = sim_vProf(jlo) + &
-                frac*(sim_vProf(jhi) - sim_vProf(jlo)) 
-           ! Putting in those boundary conditions
-           bdry_zone = -1.
-           if (dists.le.0.8*sim_acc_radius) then 
-             rho_zone  = 1.1*sim_smallRho
-             pres_zone =  1.
-             bdry_zone = +1.
-           else if (distp.le.0.8*sim_don_radius) then 
-             rho_zone  = 1.1*sim_smallRho
-             pres_zone =  1.  
-             bdry_zone = +1.
-           end if
-           ! Softenning the density far away from the acc_
-           if (dists.ge.sim_acc_radius) then 
-             rho_zone = rho_zone*exp(-(dists-sim_acc_radius)**2&
-                      / (2.*((0.1*sim_acc_radius)**2)))
-           else
-           end if
-           rho_zone = 1.01*max(rho_zone,sim_smallRho)
-           ! Done with table reading
+         ! Compute the distance from the center of each component
+           acc_dist = sqrt((xx-sim_acc_center)**2 + (yy)**2 + (zz)**2)
+           don_dist = sqrt((xx-sim_don_center)**2 + (yy)**2 + (zz)**2)
+
+         ! ============================
+         ! = Accretor Density Profile = 
+         ! ============================
+
+             call sim_find(sim_acc_rProf,SIM_NPROFILE,acc_dist,jLo)
+             if (jLo .eq. 0) then
+                jLo = 1
+                jHi = 1
+                frac = 0.
+             else if (jLo .eq. SIM_NPROFILE) then
+                jLo = SIM_NPROFILE
+                jHi = SIM_NPROFILE
+                frac = 0.
+             else
+                jHi = jLo + 1
+                frac = (acc_dist - sim_acc_rProf(jlo)) &
+                     / (sim_acc_rProf(jhi)-sim_acc_rProf(jlo))
+             endif
+             pres_acc = sim_acc_pProf(jlo) + &
+                        frac*(sim_acc_pProf(jhi)  - sim_acc_pProf(jlo))
+             rho_acc  = sim_acc_rhoProf(jlo) + &
+                        frac*(sim_acc_rhoProf(jhi)- sim_acc_rhoProf(jlo))
+             vel_acc  = sim_acc_vProf(jlo) + &
+                        frac*(sim_acc_vProf(jhi) - sim_acc_vProf(jlo))                         
+             mass_acc = sim_don_mProf(jlo) + &
+                        frac*(sim_don_mProf(jhi) - sim_don_mProf(jlo)) 
+          !  if (acc_dist.ge.sim_acc_radius) then 
+          !    width    = 0.1*sim_acc_radius
+          !    dist     = max(acc_dist - sim_acc_radius,0.)
+          !    soften   = exp(-(dist**2)/(2.*(width**2)))
+          !    rho_acc  = rho_acc*soften
+          !    !pres_acc = pres_acc*(soften**(1.+1./sim_acc_n))
+          !  end if
+
+         ! =========================
+         ! = Donor Density Profile = 
+         ! =========================
+
+             call sim_find(sim_don_rProf,SIM_NPROFILE,don_dist,jLo)
+             soften = 1.0
+             if (jLo .eq. 0) then
+                jLo = 1
+                jHi = 1
+                frac = 0.
+             else if (jLo .eq. SIM_NPROFILE) then
+                jLo = SIM_NPROFILE
+                jHi = SIM_NPROFILE
+                frac = 0.
+             else
+                jHi = jLo + 1
+                frac = (don_dist - sim_don_rProf(jlo)) &
+                     / (sim_don_rProf(jhi)-sim_don_rProf(jlo))
+             endif
+             pres_don = sim_don_pProf(jlo) + &
+                         frac*(sim_don_pProf(jhi)  - sim_don_pProf(jlo))
+             rho_don  = sim_don_rhoProf(jlo) + &
+                        frac*(sim_don_rhoProf(jhi)- sim_don_rhoProf(jlo))
+             vel_don  = sim_don_vProf(jlo) + &
+                        frac*(sim_don_vProf(jhi) - sim_don_vProf(jlo)) 
+             mass_don = sim_don_mProf(jlo) + &
+                        frac*(sim_don_mProf(jhi) - sim_don_mProf(jlo)) 
+           ! if (don_dist.ge.sim_don_radius) then 
+           !   width    = 0.1*sim_don_radius
+           !   dist     = max(don_dist - sim_don_radius,0.)
+           !   soften   = exp(-(dist**2)/(2.*(width**2)))
+           !   rho_don  = rho_don*soften
+           !   !pres_don = pres_don*(soften**(1.+1./sim_don_n))
+           ! end if
+
+         ! ======================
+         ! = Fill in the Fields =
+         ! ======================
+
+             if (fillDon) then
+             else
+               pres_don = 0.0
+               rho_don  = 0.0
+             end if
+             if (fillAcc) then
+             else
+               pres_acc = 0.0
+               rho_acc  = 0.0
+             end if
+             pres_zone = pres_don + pres_acc
+             rho_zone  = rho_don  + rho_acc
+             vel_zone = 0.
+
+         ! =======================
+         ! = Boundary conditions = 
+         ! =======================
+
+             bdry_zone = -1. !! -1 for fluid cells
+          !  bdry_don  = (mass_don.le.0.5*sim_don_mass).and.useBdryDon
+          !  bdry_acc  = (mass_acc.le.0.5*sim_acc_mass).and.useBdryAcc
+             bdry_don  = (don_dist.lt.0.9*sim_don_radius).and.useBdryDon
+             bdry_acc  = (acc_dist.lt.0.9*sim_acc_radius).and.useBdryAcc
+ 
+             if (bdry_don.or.bdry_acc) then 
+               bdry_zone = +1. ! 1 for solid cells 
+               if (acc_dist.le.sim_acc_radius) then 
+                 rho_zone = sim_acc_rhoc
+               else if (don_dist.le.sim_don_radius) then 
+                 rho_zone = sim_don_rhoc
+               else 
+                 stop "FUCK"
+               end if
+               vel_zone  = 0.
+             end if
+             rho_zone  = 1.001*max(rho_zone,sim_smallRho)
+             !pres_zone = 1.001*max(pres_zone,1e15)
+
+
 
            ! CALL EOS to fill in pres, eint, etc
            eosData(EOS_DENS) = rho_zone

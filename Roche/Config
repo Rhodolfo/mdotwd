@@ -1,0 +1,22 @@
+# Roche Field + Coriolis Unit
+# Supplied masses and positions, Kepler's law is used
+# to compute angular frequency.
+# Stars are (so far) assumed to be on the X axis and point masses
+
+# Rodolfo Navarrete Perez, Phillip Macias
+
+REQUIRES physics/Gravity/GravityMain/Roche
+
+# Parameters
+PARAMETER mass1       REAL    1.2
+PARAMETER mass2       REAL    0.9
+PARAMETER x1          REAL    1.0
+PARAMETER x2          REAL    2.0
+PARAMETER gravsoft    REAL    0.001
+
+# Extra flags for Gravity, allows me to turn off the centrifugal and Coriolis terms
+PARAMETER useGravity     BOOLEAN true
+PARAMETER useCentrifugal BOOLEAN true
+PARAMETER useCoriolis    BOOLEAN true
+PARAMETER useMass1       BOOLEAN true
+PARAMETER useMass2       BOOLEAN true

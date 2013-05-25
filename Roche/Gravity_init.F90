@@ -21,7 +21,6 @@
 subroutine Gravity_init()
 
   use Gravity_data
-  use Simulation_data
   use Driver_interface, ONLY : Driver_getMype, Driver_getNumProcs
   use RuntimeParameters_interface, ONLY : RuntimeParameters_get
   use PhysicalConstants_interface, ONLY : PhysicalConstants_get
@@ -54,17 +53,15 @@ subroutine Gravity_init()
 ! ================
 
   Msun    = 1.9889225d33
+  grv_com = (grv_x1*grv_m1 + grv_x2*grv_m2)/(grv_m1 + grv_m2)
   grv_m1  = Msun*grv_m1
   grv_m2  = Msun*grv_m2
+  grv_ome = sqrt(grv_newton*(grv_m1+grv_m2)/abs(grv_x1-grv_x2))
 
-! ================================
-! = Extract from Simulation_data = 
-! ================================
-  
-  grv_com = sim_centmass
-  grv_ome = sim_omega
-  grv_x1  = sim_acc_center
-  grv_x2  = sim_don_center
+  grv_y1  = 0.
+  grv_z1  = 0.
+  grv_y2  = 0.
+  grv_z2  = 0.
 
   return
 end subroutine Gravity_init

@@ -30,6 +30,12 @@ module Simulation_data
 
   !! *** Runtime Parameters *** !!
 
+  ! Flags
+  logical, save :: useBdryDon
+  logical, save :: useBdryAcc
+  logical, save :: fillDon
+  logical, save :: fillAcc
+
   ! Binary system parameters here
   real, save :: sim_omega
   real, save :: sim_separ
