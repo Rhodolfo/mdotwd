@@ -127,13 +127,11 @@ subroutine Simulation_initBlock(blockId,myPE)
                         frac*(sim_acc_vProf(jhi) - sim_acc_vProf(jlo))                         
              mass_acc = sim_don_mProf(jlo) + &
                         frac*(sim_don_mProf(jhi) - sim_don_mProf(jlo)) 
-          !  if (acc_dist.ge.sim_acc_radius) then 
-          !    width    = 0.1*sim_acc_radius
-          !    dist     = max(acc_dist - sim_acc_radius,0.)
-          !    soften   = exp(-(dist**2)/(2.*(width**2)))
-          !    rho_acc  = rho_acc*soften
-          !    !pres_acc = pres_acc*(soften**(1.+1./sim_acc_n))
-          !  end if
+             if (acc_dist.ge.sim_acc_radius) then 
+               soften   = (acc_dist/sim_acc_radius)**(-2)
+               rho_acc  = rho_acc*soften
+               pres_acc = pres_acc*(soften**(1.+1./sim_acc_n))
+             end if
 
          ! =========================
          ! = Donor Density Profile = 
@@ -162,13 +160,13 @@ subroutine Simulation_initBlock(blockId,myPE)
                         frac*(sim_don_vProf(jhi) - sim_don_vProf(jlo)) 
              mass_don = sim_don_mProf(jlo) + &
                         frac*(sim_don_mProf(jhi) - sim_don_mProf(jlo)) 
-           ! if (don_dist.ge.sim_don_radius) then 
-           !   width    = 0.1*sim_don_radius
-           !   dist     = max(don_dist - sim_don_radius,0.)
-           !   soften   = exp(-(dist**2)/(2.*(width**2)))
-           !   rho_don  = rho_don*soften
-           !   !pres_don = pres_don*(soften**(1.+1./sim_don_n))
-           ! end if
+             if (don_dist.ge.sim_don_radius) then 
+               soften   = (don_dist/sim_don_radius)**(-2)
+               rho_don  = rho_don*soften
+               pres_don = pres_don*(soften**(1.+1./sim_don_n))
+             end if
+
+
 
          ! ======================
          ! = Fill in the Fields =
@@ -193,17 +191,14 @@ subroutine Simulation_initBlock(blockId,myPE)
          ! =======================
 
              bdry_zone = -1. !! -1 for fluid cells
-          !  bdry_don  = (mass_don.le.0.5*sim_don_mass).and.useBdryDon
-          !  bdry_acc  = (mass_acc.le.0.5*sim_acc_mass).and.useBdryAcc
-             bdry_don  = (don_dist.lt.0.9*sim_don_radius).and.useBdryDon
-             bdry_acc  = (acc_dist.lt.0.9*sim_acc_radius).and.useBdryAcc
- 
+             bdry_don  = (don_dist.lt.sim_acc_bdry*sim_don_radius).and.useBdryDon
+             bdry_acc  = (acc_dist.lt.sim_don_bdry*sim_acc_radius).and.useBdryAcc 
              if (bdry_don.or.bdry_acc) then 
                bdry_zone = +1. ! 1 for solid cells 
                if (acc_dist.le.sim_acc_radius) then 
-                 rho_zone = sim_acc_rhoc
+                 rho_zone = sim_acc_inrho
                else if (don_dist.le.sim_don_radius) then 
-                 rho_zone = sim_don_rhoc
+                 rho_zone = sim_don_inrho
                else 
                  stop "FUCK"
                end if

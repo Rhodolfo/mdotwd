@@ -14,6 +14,10 @@ REQUIRES physics/Gravity/GravityMain/Roche
 
 # Parameters
 PARAMETER npoly       REAL    1.5
+PARAMETER mass1       REAL    1.2 # Accretor mass
+PARAMETER mass2       REAL    0.9 # Donor mass
+PARAMETER BdryLocDon  REAL    0.8 # Where to put the boundary 
+PARAMETER BdryLocAcc  REAL    0.8 # Where to put the boundary
 PARAMETER useBdryDon  BOOLEAN TRUE
 PARAMETER useBdryAcc  BOOLEAN TRUE
 PARAMETER fillDon     BOOLEAN TRUE

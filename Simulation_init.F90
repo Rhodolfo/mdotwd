@@ -63,10 +63,12 @@ subroutine Simulation_init()
   call RuntimeParameters_get('fillDon'   ,fillDon)
   call RuntimeParameters_get('fillAcc'   ,fillAcc)
   ! Binary parameters
-  call RuntimeParameters_get('mass1',sim_acc_mass)
-  call RuntimeParameters_get('npoly',sim_acc_n)
-  call RuntimeParameters_get('mass2',sim_don_mass)
-  call RuntimeParameters_get('npoly',sim_don_n)
+  call RuntimeParameters_get('mass1'     ,sim_acc_mass)
+  call RuntimeParameters_get('npoly'     ,sim_acc_n)
+  call RuntimeParameters_get('mass2'     ,sim_don_mass)
+  call RuntimeParameters_get('npoly'     ,sim_don_n)
+  call RuntimeParameters_get('BdryLocDon',sim_don_bdry)
+  call RuntimeParameters_get('BdryLocAcc',sim_acc_bdry)
   ! Fluff
   call RuntimeParameters_get('smlrho', sim_smallrho)
   call RuntimeParameters_get('smallX', sim_smallx)
@@ -92,19 +94,19 @@ subroutine Simulation_init()
 ! Doing accretor
   call sim_lane_emden(sim_acc_n,sim_acc_mass,sim_acc_rhoc,mu,&
        sim_acc_rProf,sim_acc_radius,sim_acc_rhoProf,sim_acc_mProf,&
-       sim_acc_pProf,sim_acc_vProf,sim_acc_cProf,sim_acc_c)
+       sim_acc_pProf,sim_acc_vProf,sim_acc_cProf,sim_acc_c,&
+       sim_acc_bdry,sim_acc_inrho,sim_acc_inpres)
 ! Doing donor if included
   call sim_lane_emden(sim_don_n,sim_don_mass,sim_don_rhoc,mu,&
        sim_don_rProf,sim_don_radius,sim_don_rhoProf,sim_don_mProf,&
-       sim_don_pProf,sim_don_vProf,sim_don_cProf,sim_don_c)
+       sim_don_pProf,sim_don_vProf,sim_don_cProf,sim_don_c,&
+       sim_don_bdry,sim_don_inrho,sim_don_inpres)
 
   ! =======================================
   !  (convert masses to cgs)
   ! =======================================
   sim_acc_mass = sim_acc_mass * msun
   sim_don_mass = sim_don_mass * msun
-
-
 
   ! print initial condition profile to file
   if(myPE .eq. 0) then
@@ -185,12 +187,16 @@ end subroutine Simulation_init
 
 
 
-  subroutine sim_lane_emden(ordern,polmass,rhoc,mu,rProf,polr,rhoProf,mProf,pProf,vProf,cProf,c)
+  subroutine sim_lane_emden(ordern,polmass,rhoc,mu,&
+                            rProf,polr,rhoProf,mProf,&
+                            pProf,vProf,cProf,c,&
+                            bdry,inrho,inpres)
   use Simulation_data, only: SIM_NPROFILE, sim_xmax
   implicit none
-  real :: ordern,polmass,rhoc,mu,polr,c,dist,width,soften
+  real :: ordern,polmass,rhoc,mu,polr,c,bdry,inrho,inpres
   real :: Pres
   real :: xsurf, ypsurf, tol, polyk
+  integer :: surfpos
   integer :: iend, ipos, mode, j
   integer :: n, nsteps, iprint 
   real, dimension(SIM_NPROFILE) :: xx, yy, yp, mass, ebind, &
@@ -208,9 +214,12 @@ end subroutine Simulation_init
   real, dimension(SIM_NPROFILE)    :: cProf
   real, dimension(SIM_NPROFILE)    :: mProf
   character(len=MAX_STRING_LENGTH) :: profFile
- 
-  mode = 2
-  tol = 1.e-10
+  ! Some extra stiff
+  integer :: jLo,jHi
+  real    :: dist,soften,frac
+  ! Begin
+  mode  = 2
+  tol   = 1.e-10
   polyk = 1e13/(mu**(5./3.))
   ! Solve Lane-Emden
   call polytr(ordern,polmass,rhoc,polyk,mu,mode,&
@@ -261,17 +270,34 @@ end subroutine Simulation_init
      do j=n,SIM_NPROFILE
         rProf(j) =  0.50*(R(n,1)+R(n-1,1)) &
              + (j-n)*(sim_xmax - 0.50*(R(n,1)+R(n-1,1)) )/(SIM_NPROFILE - n)
-        width    = 0.2*rProf(n)
-        dist     = abs(rProf(j)-rProf(n))
-        soften   = exp(-(dist)**2/(2.*(width**2))) 
-        rhoProf(j) = rho(n,1)*soften
+      ! Make the density drop as r**(-2) for radii larger than the polytrope
+      ! soften     = min((rProf(j)/rProf(n))**(-2),1.)
+        rhoProf(j) = rho(n,1)!*soften
         mProf(j) = mass(n)
-        pProf(j) = P(n)*(soften**(1.+1./ordern))
+        pProf(j) = P(n)!*(soften**(1.+1./ordern))
         vProf(j) = u(n,1)
      end do
   else
      call Driver_abortFlash('Box smaller than star')
   endif
+  dist = bdry*polr
+ ! Let's get the density the boundary must be set at
+  call sim_find_copy(rProf,SIM_NPROFILE,dist,jLo)
+  if (jLo .eq. 0) then
+    jLo = 1
+    jHi = 1
+    frac = 0.
+  else if (jLo .eq. SIM_NPROFILE) then
+    jLo = SIM_NPROFILE
+    jHi = SIM_NPROFILE
+    frac = 0.
+  else
+    jHi = jLo + 1
+    frac = (dist - rProf(jlo)) &
+         / (rProf(jhi)-rProf(jlo))
+  end if
+  inrho  = rhoProf(jLo) + frac*(rhoProf(jHi)-rhoProf(jLo))
+  inpres =   pProf(jLo) + frac*(  pProf(jHi)-  pProf(jLo))
  ! CLEAN UP
   deallocate(rho)
   deallocate(P)
@@ -279,3 +305,56 @@ end subroutine Simulation_init
   deallocate(u)
   return
   end subroutine sim_lane_emden
+
+
+
+
+
+
+!******************************************************************************
+
+!  Routine:     sim_find()
+
+!  Description: Given a monotonically increasing table x(nn) and a test value
+!               x0, return the index i of the largest table value less than
+!               or equal to x0 (or 0 if x0 < x(1)).  Use binary search.
+
+subroutine sim_find_copy (x, nn, x0, i)
+
+  implicit none
+
+! Arguments, LBR guessed intent on these
+  integer, intent(IN) :: nn
+  integer, intent(OUT):: i
+  real, intent(IN)    :: x(nn), x0
+
+! local variables
+  integer  il, ir, im
+
+  if (x0 .lt. x(1)) then
+
+     i = 0
+
+  elseif (x0 .gt. x(nn)) then
+
+     i = nn
+
+  else
+
+     il = 1
+     ir = nn
+10   if (ir .eq. il+1) goto 20
+     im = (il + ir) / 2
+     if (x(im) .gt. x0) then
+        ir = im
+     else
+        il = im
+     endif
+     goto 10
+20   i = il
+
+  endif
+
+  return
+end subroutine sim_find_copy
+

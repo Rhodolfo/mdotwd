@@ -7,8 +7,10 @@ x1    = 0.0
 x2    = 1.0
 
 # Simulation flags
+BdryLocDon = 0.8
 useBdryDon = .false.
 fillDon    = .false.
+BdryLocAcc = 0.8 
 useBdryAcc = .true.
 fillAcc    = .true.
 
@@ -20,7 +22,7 @@ useMass1       = .false.
 useMass2       = .false.
 
 # Refinement
-lrefine_max  = 3
+lrefine_max  = 4
 lrefine_min  = 1
 refine_var_1 = "pres"
 refine_var_2 = "dens"
@@ -54,11 +56,11 @@ checkdon_FileIntervalTime   = 1000.
 #checkdon_FileIntervalStep   = 10
 
 # dump plot files every plotFileIntervalTime seconds
-plotFileIntervalTime    = 0.2
+plotFileIntervalTime    = 0.05
 #plotFileIntervalStep    = 1
 
 # go for nend steps or tmax seconds, whichever comes first
-nend          = 1000
+nend          = 100000
 tmax          = 5.
 
 # This is for James' relaxation routine

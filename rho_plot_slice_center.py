@@ -13,9 +13,9 @@ from os      import system
 # tmax is the maximum time index
 fn      = "wdwd_hdf5_plt_cnt_"
 fo      = "wdwd_plt_"
-varlist = ["dens","velt","bdry"]
+varlist = ["bdry","dens","velt","pres"]
 tmin = 0
-tmax = 25
+tmax = 100
 
 # x,y,z are the center of your simulation
 # z is the height coordinate of the slice

@@ -46,17 +46,23 @@ module Simulation_data
   ! Accretor parameters go here
   real, save :: sim_acc_mass
   real, save :: sim_acc_radius
+  real, save :: sim_acc_bdry
   real, save :: sim_acc_center
   real, save :: sim_acc_n
   real, save :: sim_acc_c
   real, save :: sim_acc_rhoc
+  real, save :: sim_acc_inrho
+  real, save :: sim_acc_inpres
   ! Donor parameters here
   real, save :: sim_don_mass
   real, save :: sim_don_radius
   real, save :: sim_don_center
+  real, save :: sim_don_bdry
   real, save :: sim_don_n
   real, save :: sim_don_c
   real, save :: sim_don_rhoc
+  real, save :: sim_don_inrho
+  real, save :: sim_don_inpres
   ! Minimum stuff
   real, save :: sim_smallrho
   real, save :: sim_smallx
