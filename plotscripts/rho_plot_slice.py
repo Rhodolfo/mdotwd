@@ -15,7 +15,7 @@ from os      import system
 # tmax is the maximum time index
 fn      = "wdwd_hdf5_plt_cnt_"
 fo      = "wdwd_plt_"
-varlist = ["velt","bdry"]
+varlist = ["velt"]
 tmin = 0
 tmax = 25
 
@@ -44,22 +44,25 @@ cmd = 'mkdir -p frames'
 os.system(cmd)
 
 # Loop over all plot variables
-for variable in varlist:
-  os.system(cmd+"/"+variable)
-# Opening a log file
-  lg = open("frames/"+variable+"/slices_log","w")
-  lg.write("# tindex "+variable+"_max maxloc\n")
-  # Loop over desired files, one doesn't need to follow bdry throughout
-  tdum = tmax
-  if variable == "bdry": tdum = 0
-  for i in range(tmin,tdum+1):
-    if -1  < i < 10  : ni = "000" + str(i)
-    if  9  < i < 100 : ni = "00"  + str(i)
-    if 100 < i < 1000: ni = "0"   + str(i)
-    na = fn+ni
-    no = fo+ni
-    pf = load(na)
-    dd = pf.h.all_data()
+tdum = tmax
+switch1 = 0
+switch2 = 0
+for i in range(tmin,tdum+1):
+  if -1  < i < 10  : ni = "000" + str(i)
+  if  9  < i < 100 : ni = "00"  + str(i)
+  if 100 < i < 1000: ni = "0"   + str(i)\
+  na = fn+ni
+  no = fo+ni
+  pf = load(na)
+  dd = pf.h.all_data()
+  if switch2 == 1: switch2 = 1
+  for variable in varlist:
+    # Opening a log file and creating a directory if needed
+    os.system(cmd+"/"+variable)
+    if switch1 == 0: 
+      lg = open("frames/"+variable+"/slices_log","w")
+      lg.write("# tindex "+variable+"_max maxloc\n")
+    lg = open("frames/"+variable+"/slices_log","a")
     # Find extrema
     ext   = dd.quantities["Extrema"](variable)[0]
     min   = ext[0]
@@ -84,5 +87,6 @@ for variable in varlist:
       center = [x,y,z]
       pc = PlotCollection(pf,center)
       p2 = pc.add_slice(variable,"z")
-      p2.modify["velocity"](scale=vtmax)
+      p2.modify["velocity"](normalize=True)
       pc.save("frames/"+variable+"/slices_"+str(ni)+"/"+no+"_"+nk)
+  switch2 = 1

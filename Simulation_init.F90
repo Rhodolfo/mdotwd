@@ -48,7 +48,7 @@ subroutine Simulation_init()
   call Driver_abortFlash("SORRY, Cellular not defined for non fixed block size")
   real             rvec(blockExtent(HIGH,IAXIS)*blockExtent(HIGH,JAXIS)*blockExtent(HIGH,KAXIS))
 #endif  
-  G = 6.673e-8
+  G    = 6.673e-8
   Msun = 1.9889225d33
   Rsun = 6.96d10
   !-----------------------------------------------------------------------------
@@ -56,12 +56,13 @@ subroutine Simulation_init()
   !-----------------------------------------------------------------------------
   call Driver_getMype(MESH_COMM, sim_meshMe)
   myPE = sim_meshMe
-
   ! Flags
+  call RuntimeParameters_get('useMassShl',useMassShl)
   call RuntimeParameters_get('useBdryDon',useBdryDon)
   call RuntimeParameters_get('useBdryAcc',useBdryAcc)
   call RuntimeParameters_get('fillDon'   ,fillDon)
   call RuntimeParameters_get('fillAcc'   ,fillAcc)
+  call RuntimeParameters_get('RedoDon'   ,RedoDon)
   ! Binary parameters
   call RuntimeParameters_get('mass1'     ,sim_acc_mass)
   call RuntimeParameters_get('npoly'     ,sim_acc_n)
@@ -69,6 +70,7 @@ subroutine Simulation_init()
   call RuntimeParameters_get('npoly'     ,sim_don_n)
   call RuntimeParameters_get('BdryLocDon',sim_don_bdry)
   call RuntimeParameters_get('BdryLocAcc',sim_acc_bdry)
+  call RuntimeParameters_get('useNStrAcc',useNStrAcc)
   ! Fluff
   call RuntimeParameters_get('smlrho', sim_smallrho)
   call RuntimeParameters_get('smallX', sim_smallx)
@@ -78,6 +80,7 @@ subroutine Simulation_init()
   ! Relaxation 
   call RuntimeParameters_get('sim_trelax'   ,sim_trelax)
   call RuntimeParameters_get('sim_relaxrate',sim_relaxrate)
+  call RuntimeParameters_get('sim_relax'    ,sim_relax) 
   ! Compoistion
 #if NSPECIES > 0  
   sim_xn(2:NSPECIES)     = sim_smallx
@@ -94,14 +97,14 @@ subroutine Simulation_init()
 ! Doing accretor
   call sim_lane_emden(sim_acc_n,sim_acc_mass,sim_acc_rhoc,mu,&
        sim_acc_rProf,sim_acc_radius,sim_acc_rhoProf,sim_acc_mProf,&
-       sim_acc_pProf,sim_acc_vProf,sim_acc_cProf,sim_acc_c,&
+       sim_acc_pProf,sim_acc_vProf,sim_acc_cProf,sim_acc_bProf,sim_acc_c,&
        sim_acc_bdry,sim_acc_inrho,sim_acc_inpres)
 ! Doing donor if included
   call sim_lane_emden(sim_don_n,sim_don_mass,sim_don_rhoc,mu,&
        sim_don_rProf,sim_don_radius,sim_don_rhoProf,sim_don_mProf,&
-       sim_don_pProf,sim_don_vProf,sim_don_cProf,sim_don_c,&
+       sim_don_pProf,sim_don_vProf,sim_don_cProf,sim_don_bProf,sim_don_c,&
        sim_don_bdry,sim_don_inrho,sim_don_inpres)
-
+       
   ! =======================================
   !  (convert masses to cgs)
   ! =======================================
@@ -112,10 +115,14 @@ subroutine Simulation_init()
   if(myPE .eq. 0) then
      open(45,file="initial_acc_prof.dat")
      open(46,file="initial_don_prof.dat")
+     write(45,*) "# i m r dens pres"
+     write(46,*) "# i m r dens pres"
      do i=1,SIM_NPROFILE
-        write(45,*) i,sim_acc_rProf(i),sim_acc_rhoProf(i),sim_acc_pProf(i),sim_acc_vProf(i)
-        write(46,*) i,sim_don_rProf(i),sim_don_rhoProf(i),sim_don_pProf(i),sim_don_vProf(i)
-     enddo
+       write(45,*) i,sim_acc_mProf(i),sim_acc_rProf(i),&
+                     sim_acc_rhoProf(i),sim_acc_pProf(i)
+       write(46,*) i,sim_don_mProf(i),sim_don_rProf(i),&
+                     sim_don_rhoProf(i),sim_don_pProf(i)
+     end do
      close(45)
      close(46)
   endif
@@ -133,46 +140,46 @@ subroutine Simulation_init()
 
 ! Writing data over here
   if (myPE .eq. 0) then
-     open(unit=45,file="rho.par",status="unknown")
      i = 45
-     write(i,*) "============================================================"
+     open(unit=i,file="rho.par",status="unknown")
+     write(i,*) "==================================="
      write(i,*)  "Polytrope Parameters for Accretor"
-     write(i,*)  "mu =",mu
-     write(i,*)  "Gamma = 1+1/n = ", 1.0+1.0/sim_acc_n
-     write(i,*)  "mass = ", sim_acc_mass, "  rhoc = ", sim_acc_rhoc
-     write(i,*)  "Using mass, rhoc to compute polyk"
-     write(i,*) "============================================================"
+     write(i,*)  "mu      =",mu
+     write(i,*)  "npoly   =",sim_acc_n
+     write(i,*)  "Gamma   =",1.0+1.0/sim_acc_n
+     write(i,*)  "mass    =", sim_acc_mass
+     write(i,*)  "rhoc    =", sim_acc_rhoc
+     write(i,*)  "inrho   =", sim_acc_inrho
+     write(i,*)  "inpres  =", sim_acc_inpres
+     write(i,*)  "radius  =", sim_acc_radius
+     write(i,*)  "c_s     =", sim_acc_c
+     write(i,*)  "t_cross =", sim_acc_radius / sim_acc_c 
+     write(i,*) "===================================" 
      write(i,*)  "Polytrope Parameters for Donor"
-     write(i,*)  "mu =",mu
-     write(i,*)  "Gamma = 1+1/n = ", 1.0+1.0/sim_don_n
-     write(i,*)  "mass = ", sim_don_mass, "  rhoc = ", sim_don_rhoc
-     write(i,*)  "Using mass, rhoc to compute polyk"
-     write(i,*) "============================================================"
-     write(i,*)  "Resulting Accretor Star Parameters"
-     write(i,*)  "R_acc_      = ", sim_acc_radius
-     write(i,*)  "sound_speed = ", sim_acc_c
-     write(i,*)  "t_crossing  = ", sim_acc_radius / sim_acc_c
-     write(i,*) "============================================================"
-     write(i,*)  "Resulting Donor Star Parameters"
-     write(i,*)  "R_acc_      = ", sim_don_radius
-     write(i,*)  "sound_speed = ", sim_don_c
-     write(i,*)  "t_crossing  = ", sim_don_radius / sim_don_c
-     write(i,*) "============================================================" 
-     write(i,*)  "Resulting Binary System Parameters"
-     write(i,*)  "min_x       = ", sim_xmin
-     write(i,*)  "max_x       = ", sim_xmax
-     write(i,*)  "acc_cent    = ", sim_acc_center
-     write(i,*)  "don_cent    = ", sim_don_center 
-     write(i,*)  "Separation  = ", sim_separ
-     write(i,*)  "Frequency   = ", sim_omega
-     write(i,*)  "Period      = ", 6.28/sim_omega
-     write(i,*)  "Mass Ratio  = ", sim_ratio
-     write(i,*) "============================================================" 
-     close(45)
+     write(i,*)  "mu      =",mu
+     write(i,*)  "npoly   =",sim_don_n
+     write(i,*)  "Gamma   =",1.0+1.0/sim_don_n
+     write(i,*)  "mass    =", sim_don_mass
+     write(i,*)  "rhoc    =", sim_don_rhoc
+     write(i,*)  "inrho   =", sim_don_inrho
+     write(i,*)  "inpres  =", sim_don_inpres 
+     write(i,*)  "radius  =", sim_don_radius
+     write(i,*)  "c_s     =", sim_don_c
+     write(i,*)  "t_cross =", sim_don_radius / sim_don_c  
+     write(i,*) "===================================" 
+     write(i,*)  "Binary System Parameters"
+     write(i,*)  "min_x   = ", sim_xmin
+     write(i,*)  "max_x   = ", sim_xmax
+     write(i,*)  "acc_pos = ", sim_acc_center
+     write(i,*)  "don_pos = ", sim_don_center 
+     write(i,*)  "com_pos = ", sim_centmass 
+     write(i,*)  "separtn = ", sim_separ
+     write(i,*)  "omega   = ", sim_omega
+     write(i,*)  "period  = ", 6.28/sim_omega
+     write(i,*)  "qratio  = ", sim_ratio
+     write(i,*) "=================================="  
+     close(i)
    end if
-
-! Do the data writing
-
   return
 end subroutine Simulation_init
 
@@ -189,9 +196,9 @@ end subroutine Simulation_init
 
   subroutine sim_lane_emden(ordern,polmass,rhoc,mu,&
                             rProf,polr,rhoProf,mProf,&
-                            pProf,vProf,cProf,c,&
+                            pProf,vProf,cProf,bProf,c,&
                             bdry,inrho,inpres)
-  use Simulation_data, only: SIM_NPROFILE, sim_xmax
+  use Simulation_data, only: SIM_NPROFILE, sim_xmax,useMassShl
   implicit none
   real :: ordern,polmass,rhoc,mu,polr,c,bdry,inrho,inpres
   real :: Pres
@@ -213,6 +220,7 @@ end subroutine Simulation_init
   real, dimension(SIM_NPROFILE)    :: vProf 
   real, dimension(SIM_NPROFILE)    :: cProf
   real, dimension(SIM_NPROFILE)    :: mProf
+  real, dimension(SIM_NPROFILE)    :: bProf
   character(len=MAX_STRING_LENGTH) :: profFile
   ! Some extra stiff
   integer :: jLo,jHi
@@ -270,19 +278,24 @@ end subroutine Simulation_init
      do j=n,SIM_NPROFILE
         rProf(j) =  0.50*(R(n,1)+R(n-1,1)) &
              + (j-n)*(sim_xmax - 0.50*(R(n,1)+R(n-1,1)) )/(SIM_NPROFILE - n)
-      ! Make the density drop as r**(-2) for radii larger than the polytrope
-      ! soften     = min((rProf(j)/rProf(n))**(-2),1.)
-        rhoProf(j) = rho(n,1)!*soften
+        rhoProf(j) = rho(n,1)
         mProf(j) = mass(n)
-        pProf(j) = P(n)!*(soften**(1.+1./ordern))
+        pProf(j) = P(n)
         vProf(j) = u(n,1)
      end do
   else
      call Driver_abortFlash('Box smaller than star')
   endif
-  dist = bdry*polr
  ! Let's get the density the boundary must be set at
-  call sim_find_copy(rProf,SIM_NPROFILE,dist,jLo)
+ ! Are we using Mass shells or Radial values?
+  if (useMassShl) then 
+    dist  = bdry*mass(ipos)
+    bProf = mProf
+  else
+    dist  = bdry*radius(ipos)
+    bProf = rProf
+  end if
+  call sim_find_copy(bProf,SIM_NPROFILE,dist,jLo)
   if (jLo .eq. 0) then
     jLo = 1
     jHi = 1
@@ -293,8 +306,8 @@ end subroutine Simulation_init
     frac = 0.
   else
     jHi = jLo + 1
-    frac = (dist - rProf(jlo)) &
-         / (rProf(jhi)-rProf(jlo))
+    frac = (dist - bProf(jlo)) &
+         / (bProf(jhi)-bProf(jlo))
   end if
   inrho  = rhoProf(jLo) + frac*(rhoProf(jHi)-rhoProf(jLo))
   inpres =   pProf(jLo) + frac*(  pProf(jHi)-  pProf(jLo))
@@ -305,6 +318,13 @@ end subroutine Simulation_init
   deallocate(u)
   return
   end subroutine sim_lane_emden
+
+
+
+
+
+
+
 
 
 
@@ -354,7 +374,6 @@ subroutine sim_find_copy (x, nn, x0, i)
 20   i = il
 
   endif
-
   return
 end subroutine sim_find_copy
 

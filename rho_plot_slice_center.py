@@ -13,9 +13,9 @@ from os      import system
 # tmax is the maximum time index
 fn      = "wdwd_hdf5_plt_cnt_"
 fo      = "wdwd_plt_"
-varlist = ["bdry","dens","velt","pres"]
-tmin = 0
-tmax = 100
+varlist = ["dens"]
+tmin = 42
+tmax = 80
 
 # x,y,z are the center of your simulation
 # z is the height coordinate of the slice
@@ -48,7 +48,7 @@ for variable in varlist:
   for i in range(tmin,tdum+1):
     if -1  < i < 10  : ni = "000" + str(i)
     if  9  < i < 100 : ni = "00"  + str(i)
-    if 100 < i < 1000: ni = "0"   + str(i)
+    if 99  < i < 1000: ni = "0"   + str(i)
     na = fn+ni
     no = fo+ni
     pf = load(na)
@@ -62,14 +62,14 @@ for variable in varlist:
     xxmax = dum11[0]
     yymax = dum11[1]
     zzmax = dum11[2]
-    ext   = dd.quantities["Extrema"]("velt")[0]
-    vtmin = ext[0]
-    vtmax = ext[1] 
+    #ext   = dd.quantities["Extrema"]("velt")[0]
+    #vtmin = ext[0]
+    #vtmax = ext[1] 
     # Logging
     lg.write(ni+"   "+str(max)+"   "+str(xxmax)+"   "+str(yymax)+"   "+str(zzmax)+"\n")
     # Let's slice this thing up 
     center = [x,y,z]
     pc = PlotCollection(pf,center)
     p2 = pc.add_slice(variable,"z")
-    p2.modify["velocity"](scale=vtmax)
+    p2.modify["velocity"](normalize=False)
     pc.save("frames/"+variable+"/"+no)

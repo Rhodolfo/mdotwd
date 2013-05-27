@@ -7,22 +7,24 @@ x1    = 0.0
 x2    = 1.0
 
 # Simulation flags
+useMassShl = .false.
 BdryLocDon = 0.8
-useBdryDon = .false.
-fillDon    = .false.
+useBdryDon = .true.
+fillDon    = .true.
 BdryLocAcc = 0.8 
 useBdryAcc = .true.
+useNStrAcc = .false.
 fillAcc    = .true.
 
 # Gravity flags for Roche unit
-useGravity     = .false.
-useCentrifugal = .false.
-useCoriolis    = .false.
-useMass1       = .false.
-useMass2       = .false.
+useGravity     = .true.
+useCentrifugal = .true.
+useCoriolis    = .true.
+useMass1       = .true.
+useMass2       = .true.
 
 # Refinement
-lrefine_max  = 4
+lrefine_max  = 5
 lrefine_min  = 1
 refine_var_1 = "pres"
 refine_var_2 = "dens"
@@ -33,12 +35,12 @@ refine_var_4 = "none"
 basenm   = "wdwd_"
 log_file = "wdwd.log"
 
-# for acc_ting a new run
-reacc_t  = .false.
+# for starting a new run
+restart  = .false.
 checkdon_FileNumber = 0
 plotFileNumber = 0
-# for reacc_ting an old one
-#reacc_t  = .true.
+# for restarting an old one
+#restart  = .true.
 #checkdon_FileNumber = 63
 #plotFileNumber = 125
 
@@ -56,16 +58,17 @@ checkdon_FileIntervalTime   = 1000.
 #checkdon_FileIntervalStep   = 10
 
 # dump plot files every plotFileIntervalTime seconds
-plotFileIntervalTime    = 0.05
+plotFileIntervalTime    = 0.2
 #plotFileIntervalStep    = 1
 
 # go for nend steps or tmax seconds, whichever comes first
 nend          = 100000
-tmax          = 5.
+tmax          = 60.
 
 # This is for James' relaxation routine
-sim_trelax    = 0.
+sim_trelax    = 5.0
 sim_relaxrate = 0.9
+sim_relax     = .true.
 
 # initial and minimum 
 dtinit = 1.0e-16
@@ -95,14 +98,14 @@ xmin = -2.5e9
 xmax =  2.5e9
 ymin = -2.5e9
 ymax =  2.5e9
-zmin = -2.5e9
+zmin =  0.0
 zmax =  2.5e9
 
 
 # Blocks at lrefine = 1
 nblockx = 4
 nblocky = 4
-nblockz = 4
+nblockz = 1
 
 # cartesian geometry
 geometry = "cartesian"

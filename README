@@ -1,5 +1,28 @@
-mdotwd
-======
+  mdotwd
+  ======
+
+  Hi, 
+  This is a FLASH4 setup, along with a Gravity Unit (see the Roche directory),
+  it is meant to simulate accretion from one WD to another through Roche lobe overflow. 
+
+  Some notes:
+  1. Problem does not use self gravity, it depends on a  gravity unit called Roche. 
+  2. To use the gravity unit, put it in source/Gravity/GravityMain/Roche. 
+  3. After initial calculations, the code dumps some useful parameters in the files
+  - rho.par - Stores some results from the Lane-Emden solver.
+  - initial_don_profile.dat - Saves the donor profile.
+  - initial_acc_profile.dat - Saves the accretor profile.
+
+05/24/2013:
+- I had some muffins, a lot of time and the inability to sleep,
+  this led to building the whole code in a single Friday night, 
+  with some advances during the rest of the weekend.
+- Centrifugal and Coriolis terms of the Roche field have been corrected.
+- Full Roche field stored in new gravity unit Roche,
+  it was a really good Friday.
+- Driver_dourceTerms modified to add material refilling and initial relaxation.
+  Saturday morning was interesting too. 
+- Maybe I should go outside. 
 
 04/22/2013:
 - Figured out simple git things, about to add real stuff.

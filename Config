@@ -13,26 +13,30 @@ REQUIRES Grid/GridBoundaryConditions/OneRow
 REQUIRES physics/Gravity/GravityMain/Roche
 
 # Parameters
-PARAMETER npoly       REAL    1.5
-PARAMETER mass1       REAL    1.2 # Accretor mass
-PARAMETER mass2       REAL    0.9 # Donor mass
-PARAMETER BdryLocDon  REAL    0.8 # Where to put the boundary 
-PARAMETER BdryLocAcc  REAL    0.8 # Where to put the boundary
-PARAMETER useBdryDon  BOOLEAN TRUE
-PARAMETER useBdryAcc  BOOLEAN TRUE
-PARAMETER fillDon     BOOLEAN TRUE
-PARAMETER fillAcc     BOOLEAN TRUE
+PARAMETER npoly       REAL    1.5   # Polytropic index
+PARAMETER mass1       REAL    1.2   # Accretor mass
+PARAMETER mass2       REAL    0.9   # Donor mass
+PARAMETER BdryLocDon  REAL    0.8   # Where to put the boundary 
+PARAMETER BdryLocAcc  REAL    0.8   # Where to put the boundary
+PARAMETER useNStrAcc  BOOLEAN FALSE # Make the accretor a neutron star
+PARAMETER useMassShl  BOOLEAN FALSE # Use mass shells to make boundaries
+PARAMETER useBdryDon  BOOLEAN TRUE  # Use boundary on donor
+PARAMETER useBdryAcc  BOOLEAN TRUE  # Use boundary on accretor
+PARAMETER RedoDon     BOOLEAN FALSE # Refill donor material
+PARAMETER fillDon     BOOLEAN TRUE  # Fill in donor material
+PARAMETER fillAcc     BOOLEAN TRUE  # Fill in acctr material
 
 # Domain boundaries, resolved densities and mass fractions
 PARAMETER sim_xmax       REAL    1.e10    [0.0 to ]
 PARAMETER sim_xmin       REAL    0.       [0.0 to ]
-VARIABLE  bdry
 PARAMETER sim_smallrho   REAL    0.001    [0.0 to ]
 PARAMETER sim_smallx     REAL    0.001    [0.0 to ]
+VARIABLE  bdry
 
 # Variables for relaxing the polytrope
 PARAMETER sim_trelax     REAL    1.       [0.0 to ]
 PARAMETER sim_relaxrate  REAL    0.       [0.0 to ]
+PARAMETER sim_relax      BOOLEAN FALSE
 
 # Import declarations and python scrips
 DATAFILES *.dek *.py

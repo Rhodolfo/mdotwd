@@ -20,6 +20,7 @@ subroutine Simulation_initBlock(blockId,myPE)
 
 !  Local variables
 
+  real, external :: softening_func
   real :: abar, zbar                 ! something to do with sum of mass fractions
   real :: xx, yy, zz, acc_dist, don_dist
   logical, parameter :: useGuardCell = .TRUE.
@@ -28,8 +29,6 @@ subroutine Simulation_initBlock(blockId,myPE)
   real,allocatable,dimension(:) :: xCoordsCell,yCoordsCell,zCoordsCell
   integer,dimension(2,MDIM) :: blkLimits,blkLimitsGC
   integer :: sizeX,sizeY,sizeZ
-
-
 
   integer :: i, j, k, n
   integer, dimension(MDIM) :: iPosition   !for putting data with Grid_putData
@@ -46,7 +45,12 @@ subroutine Simulation_initBlock(blockId,myPE)
   logical :: bdry_don,bdry_acc
   real :: ptot, eint, etot, gamma
   real, dimension(EOS_NUM)  :: eosData
-  real :: sum_p, sum_rho, width, soften, dist
+  real :: sum_p, sum_rho, width, soften, dist, soften_xtra
+  soften_xtra = 1.
+
+
+
+
 
   ! ----------------------------------------------------------------------------------------------
 
@@ -125,12 +129,13 @@ subroutine Simulation_initBlock(blockId,myPE)
                         frac*(sim_acc_rhoProf(jhi)- sim_acc_rhoProf(jlo))
              vel_acc  = sim_acc_vProf(jlo) + &
                         frac*(sim_acc_vProf(jhi) - sim_acc_vProf(jlo))                         
-             mass_acc = sim_don_mProf(jlo) + &
-                        frac*(sim_don_mProf(jhi) - sim_don_mProf(jlo)) 
-             if (acc_dist.ge.sim_acc_radius) then 
-               soften   = (acc_dist/sim_acc_radius)**(-2)
+             mass_acc = sim_acc_mProf(jlo) + &
+                        frac*(sim_acc_mProf(jhi) - sim_acc_mProf(jlo)) 
+             if (acc_dist.gt.sim_acc_radius) then 
+               soften   = soften_xtra &
+                        * softening_func(acc_dist/sim_acc_radius)
                rho_acc  = rho_acc*soften
-               pres_acc = pres_acc*(soften**(1.+1./sim_acc_n))
+             ! pres_acc = pres_acc*(soften**(1.+1./sim_acc_n))
              end if
 
          ! =========================
@@ -160,10 +165,12 @@ subroutine Simulation_initBlock(blockId,myPE)
                         frac*(sim_don_vProf(jhi) - sim_don_vProf(jlo)) 
              mass_don = sim_don_mProf(jlo) + &
                         frac*(sim_don_mProf(jhi) - sim_don_mProf(jlo)) 
-             if (don_dist.ge.sim_don_radius) then 
-               soften   = (don_dist/sim_don_radius)**(-2)
+             if (don_dist.gt.sim_don_radius) then 
+               soften   = soften_xtra &
+                        * softening_func(don_dist/sim_don_radius)
+ 
                rho_don  = rho_don*soften
-               pres_don = pres_don*(soften**(1.+1./sim_don_n))
+             ! pres_don = pres_don*(soften**(1.+1./sim_don_n))
              end if
 
 
@@ -191,21 +198,33 @@ subroutine Simulation_initBlock(blockId,myPE)
          ! =======================
 
              bdry_zone = -1. !! -1 for fluid cells
-             bdry_don  = (don_dist.lt.sim_acc_bdry*sim_don_radius).and.useBdryDon
-             bdry_acc  = (acc_dist.lt.sim_don_bdry*sim_acc_radius).and.useBdryAcc 
+           ! Decide between mass or radius criterion for boundary
+             if (useMassShl) then 
+               bdry_don  = (mass_don.lt.sim_don_bdry*sim_don_mass).and.useBdryDon
+               bdry_acc  = (mass_acc.lt.sim_acc_bdry*sim_acc_mass).and.useBdryAcc  
+             else
+               bdry_don  = (don_dist.lt.sim_acc_bdry*sim_don_radius).and.useBdryDon
+               bdry_acc  = (acc_dist.lt.sim_don_bdry*sim_acc_radius).and.useBdryAcc 
+             end if
+           ! Fill in values inside boundary
              if (bdry_don.or.bdry_acc) then 
                bdry_zone = +1. ! 1 for solid cells 
                if (acc_dist.le.sim_acc_radius) then 
-                 rho_zone = sim_acc_inrho
+                 rho_zone  = sim_acc_inrho
+                 pres_zone = sim_acc_inpres
                else if (don_dist.le.sim_don_radius) then 
-                 rho_zone = sim_don_inrho
+                 rho_zone  = sim_don_inrho
+                 pres_zone = sim_don_inpres
                else 
-                 stop "FUCK"
+                 stop "YOU BASTARD"
                end if
                vel_zone  = 0.
              end if
-             rho_zone  = 1.001*max(rho_zone,sim_smallRho)
-             !pres_zone = 1.001*max(pres_zone,1e15)
+           ! if (rho_zone.le.sim_smallRho) then 
+             ! soften    = (sim_smallRho/rho_zone)**(1.+1./sim_don_n)
+               rho_zone  = 1.001*max(rho_zone,sim_smallRho)
+             ! pres_zone = pres_zone*soften
+           ! end if
 
 
 
@@ -303,3 +322,12 @@ subroutine sim_find (x, nn, x0, i)
   return
 end subroutine sim_find
 
+
+
+
+
+function softening_func(x) 
+  implicit none
+  real :: softening_func,x
+  softening_func = 1e-3*(x**(-2))
+end function softening_func

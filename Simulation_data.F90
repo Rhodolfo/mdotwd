@@ -33,9 +33,11 @@ module Simulation_data
   ! Flags
   logical, save :: useBdryDon
   logical, save :: useBdryAcc
+  logical, save :: useNStrAcc 
+  logical, save :: useMassShl
+  logical, save :: RedoDon
   logical, save :: fillDon
   logical, save :: fillAcc
-
   ! Binary system parameters here
   real, save :: sim_omega
   real, save :: sim_separ
@@ -69,18 +71,20 @@ module Simulation_data
   ! Domain boundaries
   real, save :: sim_xmax
   real, save :: sim_xmin
-  real, save :: sim_trelax
-  real, save :: sim_relaxrate
-
+  ! Relaxation vars
+  real   , save :: sim_trelax
+  real   , save :: sim_relaxrate
+  logical, save :: sim_relax
   !! *** For the Lane-Emdem solver *** !!
-  integer, parameter                     :: SIM_NPROFILE=500
-  real, dimension(NSPECIES), save        :: sim_xn
-  real, dimension(SIM_NPROFILE), save    :: sim_acc_rProf   ,sim_don_rProf
-  real, dimension(SIM_NPROFILE), save    :: sim_acc_rhoProf ,sim_don_rhoProf
-  real, dimension(SIM_NPROFILE), save    :: sim_acc_pProf   ,sim_don_pProf 
-  real, dimension(SIM_NPROFILE), save    :: sim_acc_vProf   ,sim_don_vProf
-  real, dimension(SIM_NPROFILE), save    :: sim_acc_cProf   ,sim_don_cProf
-  real, dimension(SIM_NPROFILE), save    :: sim_acc_mProf   ,sim_don_mProf
+  integer, parameter                  :: SIM_NPROFILE=500
+  real, dimension(NSPECIES)    , save :: sim_xn
+  real, dimension(SIM_NPROFILE), save :: sim_acc_rProf   ,sim_don_rProf   ! Radial
+  real, dimension(SIM_NPROFILE), save :: sim_acc_rhoProf ,sim_don_rhoProf ! Density
+  real, dimension(SIM_NPROFILE), save :: sim_acc_pProf   ,sim_don_pProf   ! Pressure
+  real, dimension(SIM_NPROFILE), save :: sim_acc_vProf   ,sim_don_vProf   ! Velocity
+  real, dimension(SIM_NPROFILE), save :: sim_acc_cProf   ,sim_don_cProf   ! Sound speed
+  real, dimension(SIM_NPROFILE), save :: sim_acc_mProf   ,sim_don_mProf   ! Mass 
+  real, dimension(SIM_NPROFILE), save :: sim_acc_bProf   ,sim_don_bProf   ! Boundary criterion
   integer, parameter        :: np = 100000
   logical, save :: sim_gCell
   integer, save :: sim_meshMe
